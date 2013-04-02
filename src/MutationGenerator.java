@@ -154,8 +154,8 @@ public class MutationGenerator {
 
 	public static void printError(){
 		System.out.println("Please enter the desired shape in the form of: hydrophobic regions; hydrogen bonded regions Hydrophobic_table_to_be_used AMINOACID_CHAIN");
-		System.out.println("For example: 26-31,34; 23,25 KD 2BEG.pdb ");
-		System.out.println("Another example: 26-31,34; 23,25 KD -chain DAEFRHDSGYEVHHQKLVFFAEDVGSNKGAIIGLMVGGVVIA ");
+		System.out.println("For example: 26-31,34 23,25 KD 2BEG.pdb ");
+		System.out.println("Another example: 26-31,34 23,25 KD -chain DAEFRHDSGYEVHHQKLVFFAEDVGSNKGAIIGLMVGGVVIA ");
 		System.exit(1);
 	}
 

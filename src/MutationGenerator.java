@@ -15,6 +15,8 @@ import java.util.StringTokenizer;
 
 
 public class MutationGenerator {
+	
+	static int aacidLocations[];
 
 	public static void main(String[] args) throws Exception{
 
@@ -127,10 +129,13 @@ public class MutationGenerator {
 		double tendency2[] = new double[fasta.length()]; //polarity
 
 		for(int i = 0; i < fasta.length(); i++){
-			if(hydrophobicRegions.contains(i) )
+			if(hydrophobicRegions.contains(aacidLocations[i]) ){
 				tendency1[i] = 12.3 - chain.get(i).hydrophobicity();
-			if(hydrogenBonds.contains(i)){
+				//System.out.println("Aminoacid " + aacidLocations[i] + " which is " + chain.get(i).name() + " should be hydrophobic");
+			}
+			if(hydrogenBonds.contains(aacidLocations[i])){
 				tendency2[i] = 52.0 - chain.get(i).polarity();
+				//System.out.println("Aminoacid " + aacidLocations[i] + " which is " + chain.get(i).name() + " should have hydrogen bonds");
 			}
 		}
 
@@ -150,7 +155,7 @@ public class MutationGenerator {
 			}
 		}
 
-		System.out.println("The change should be at " + greatestIndex + " the aminoacid: " + chain.get(greatestIndex).name() );
+		System.out.println("The change should be at " + aacidLocations[greatestIndex] + " the aminoacid: " + chain.get(greatestIndex).name() );
 
 
 	}
@@ -272,7 +277,7 @@ public class MutationGenerator {
 		String pdbString = "";
 		
 		//reading from atom doesnt work because it has missing sequence. have to read from seqres. atom part has information containing the structure.
-		
+		/*
 		try {
 			Scanner sc2 = new Scanner(new File(filename));
 			String line;
@@ -303,11 +308,11 @@ public class MutationGenerator {
 			System.exit(1);
 		}
 		
-		
-			return pdbString;
+		*/
+			
 
 		
-	/*	try {
+		try {
 			Scanner sc2 = new Scanner(new File(filename));
 			String line;
 			String ch[] = new String[100];
@@ -343,19 +348,20 @@ public class MutationGenerator {
 						
 						break;
 					}
-					System.out.println("a is " + a + " b is " + b);
+					//System.out.println("a is " + a + " b is " + b);
 					ch[a] = ch[a] + CodeToLetter(aStr);
 					aNoS[a][b] = aNo;
-					System.out.println("at aminoacid #" + aNo + " there is " + aStr + " first letter " + CodeToLetter(aStr) + " line " + line);
+					//System.out.println("at aminoacid #" + aNo + " there is " + aStr + " first letter " + CodeToLetter(aStr) + " line " + line);
 				}
 			}
 
 			sc2.close();
-			int aacidLocations[] = new int[ch[a].length()];
+			aacidLocations = new int[ch[a].length()];
 			int c = 0;
 			for (int i = 0; i < aNoS[a].length; i++){ //this will only be used if there is an issue with AminoAcids Not matching with the right locations
 				if (aNoS[a][i] != 0){
 					//System.out.print((aacidLocations[c] = aNoS[a][i]) + "-");
+					aacidLocations[c] = aNoS[a][i];
 					c++;
 				}
 			}
@@ -365,8 +371,8 @@ public class MutationGenerator {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-*/
 
+		return pdbString;
 	}
 
 	public static char CodeToLetter(String code){

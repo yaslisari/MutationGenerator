@@ -15,10 +15,11 @@ import java.util.StringTokenizer;
 
 
 public class MutationGenerator {
-	
+
 	static int aacidLocations[];
 	static double scalar1;
 	static double scalar2;
+	static int possibilities = 4;
 
 	public static void main(String[] args) throws Exception{
 
@@ -47,11 +48,11 @@ public class MutationGenerator {
 
 		scalar1 = 1.0;
 		scalar2 = 1.0;
-		
+
 		if(args.length < 4)
 			printError();
 
-		
+
 		Scanner sc = null;
 		try {
 			sc = new Scanner(new File("hydroph.csv"));
@@ -83,10 +84,10 @@ public class MutationGenerator {
 
 		String input = "";
 		System.out.println(args.length + " arguments entered");
-		
+
 		/*for(int i = 0; i < args.length; i++)
 			System.out.println("argument " + i + " is " + args[i]);*/
-			
+
 		for (int i = 0; i < 2; i++){
 			input = input + args[i];
 			if(i !=1)
@@ -110,7 +111,7 @@ public class MutationGenerator {
 			System.out.println("hydrogen bonds in the areas = " + hydrogenBonds.toString());
 
 		}
-		
+
 		String fasta = "";
 		System.out.println("reading from file: " + args[3]);
 		for(int i = 0; i < args.length; i++){
@@ -124,46 +125,31 @@ public class MutationGenerator {
 			}
 		}
 		if (fasta.equalsIgnoreCase(""))
-				fasta = pdbToString(args[3]);
+			fasta = pdbToString(args[3]);
 		//String fasta = args[2];  //the new input is the aminoacid chain
 		System.out.println("the chain to be used is " + fasta);
 
 		chain = stringToAAcid(fasta, chain, aacids);  //convert the string to chain of AAcid objects
 
-		double tendency1[] = new double[fasta.length()]; //hydrophobicity
-		double tendency2[] = new double[fasta.length()]; //polarity
 
-		for(int i = 0; i < fasta.length(); i++){
-			if(hydrophobicRegions.contains(aacidLocations[i]) ){
-				tendency1[i] = (12.3 - chain.get(i).hydrophobicity())/12.3; // normalize tendencies
-				//System.out.println("Aminoacid " + aacidLocations[i] + " which is " + chain.get(i).name() + " should be hydrophobic");
+		//sort for the tendencies
+		ArrayList<ChainAAcid> sortedTendencies = new ArrayList<ChainAAcid>();
+		sortedTendencies = sort(sortedTendencies, fasta, chain, hydrophobicRegions, hydrogenBonds, aacids);
+
+		System.out.println(sortedTendencies.toString());
+		String output = "[";
+		for(int i = 0; i < possibilities; i++){
+			if(possibilities < sortedTendencies.size()){
+				int pos = sortedTendencies.size()-1-i;
+				System.out.println("change priority " + (i+1)  + " should be at " + sortedTendencies.get(pos));
+				output = output + "(" + sortedTendencies.get(pos).chainPosition() + "," + "A)" ;  
 			}
-			if(hydrogenBonds.contains(aacidLocations[i])){
-				tendency2[i] = (52.0 - chain.get(i).polarity())/52.0;
-				//System.out.println("Aminoacid " + aacidLocations[i] + " which is " + chain.get(i).name() + " should have hydrogen bonds");
-			}
+			else
+				System.out.println("asked possibilities exceed the number of aminoacids");
 		}
-
-		//there should be a formula that finds the balance between hydrophobicity and hydrogen bonding
-
-		double tendency[] = new double[fasta.length()];
-		for (int i = 0; i < fasta.length(); i++ ){
-			tendency[i] = scalar1*tendency1[i] + scalar2*tendency2[i];
-			//System.out.println("tendency of aminoacid " + aacidLocations[i] + " is " + tendency1[i] + " + " + tendency2[i] + " = " + tendency[i]);
-		}
-
-		//determine the greatest tendency
-		int greatestIndex = 0;
-		double greatest = 0.0;
-		for (int i = 0; i < fasta.length(); i++ ){
-			if(tendency[i] > greatest){
-				greatest = tendency[i];
-				greatestIndex = i; 
-			}
-		}
-
-		System.out.println("The change should be at " + aacidLocations[greatestIndex] + " the aminoacid: " + chain.get(greatestIndex).name() );
-
+		output = output + "]";
+		System.out.println("output = " + output);
+	
 
 	}
 
@@ -212,7 +198,7 @@ public class MutationGenerator {
 			//System.out.println(" tokearray [" + i + "] = " + tokearray[i]);
 			if(tokearray[i].toString().contains("-")){ //if there is a range
 				StringTokenizer st2 = new StringTokenizer(tokearray[i], "-");
-		
+
 				if (st2.countTokens() !=2)
 					printError();
 				int a=0,b=0;
@@ -258,9 +244,9 @@ public class MutationGenerator {
 			a++;
 		}
 		sc.close();
-	//	for(int i = 0; i < hydrophr.length; i++)
+		//	for(int i = 0; i < hydrophr.length; i++)
 		//	System.out.println("entry " + i + " is " + hydrophr[i]);
-		
+
 		return hydrophr;
 
 	}
@@ -273,6 +259,8 @@ public class MutationGenerator {
 				if((ch - aacids.get(j).name()) == 0){
 					//	System.out.println("the character at " + i + " is " + ch);
 					chain.add(aacids.get(j));
+					//chain.add(new AAcid(aacids.get(j).name(), aacids.get(j).hydrophobicity(), aacids.get(j).polarity(), aacidLocations[i]));
+					//	System.out.println("at chain position " + chain.get(chain.size()-1).chainPosition() + " aminoacid " + chain.get(chain.size()-1).name());
 					break;
 				}
 			}
@@ -282,7 +270,7 @@ public class MutationGenerator {
 
 	public static String pdbToString(String filename){
 		String pdbString = "";
-		
+
 		//reading from atom doesnt work because it has missing sequence. have to read from seqres. atom part has information containing the structure.
 		/*
 		try {
@@ -308,17 +296,17 @@ public class MutationGenerator {
 					}
 				}
 			}
-			
+
 		}catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			System.exit(1);
 		}
-		
-		*/
-			
 
-		
+		 */
+
+
+
 		try {
 			Scanner sc2 = new Scanner(new File(filename));
 			String line;
@@ -347,12 +335,12 @@ public class MutationGenerator {
 					else{
 						//this is a new string
 						System.out.println("chain is " + (pdbString = ch[a]) );
-						
+
 						//a++;
 						//currentNo = 0;
 						//b = 0;
 						//for now ignore the rest
-						
+
 						break;
 					}
 					//System.out.println("a is " + a + " b is " + b);
@@ -373,7 +361,7 @@ public class MutationGenerator {
 				}
 			}
 
-			
+
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -430,6 +418,71 @@ public class MutationGenerator {
 		return letter;
 	}
 
+	public static ArrayList<ChainAAcid> sort(ArrayList<ChainAAcid> sortedTendencies, String fasta, ArrayList<AAcid> chain, 
+			ArrayList<Integer> hydrophobicRegions, ArrayList<Integer> hydrogenBonds, ArrayList<AAcid> aacids ){
+
+		double tendency1[] = new double[fasta.length()]; //hydrophobicity
+		double tendency2[] = new double[fasta.length()]; //polarity
+
+		for(int i = 0; i < fasta.length(); i++){
+			if(hydrophobicRegions.contains(aacidLocations[i]) ){
+				tendency1[i] = (12.3 - chain.get(i).hydrophobicity())/12.3; // normalize tendencies
+				//System.out.println("Aminoacid " + aacidLocations[i] + " which is " + chain.get(i).name() + " should be hydrophobic");
+			}
+			if(hydrogenBonds.contains(aacidLocations[i])){
+				tendency2[i] = (52.0 - chain.get(i).polarity())/52.0;
+				//System.out.println("Aminoacid " + aacidLocations[i] + " which is " + chain.get(i).name() + " should have hydrogen bonds");
+			}
+		}
+
+		//there should be a formula that finds the balance between hydrophobicity and hydrogen bonding
+
+		double tendency[] = new double[fasta.length()];
+		for (int i = 0; i < fasta.length(); i++ ){
+			tendency[i] = scalar1*tendency1[i] + scalar2*tendency2[i];
+			//System.out.println("tendency of aminoacid " + aacidLocations[i] + " is " + tendency1[i] + " + " + tendency2[i] + " = " + tendency[i]);
+		}
+
+		//determine the greatest tendency
+		int greatestIndex = 0;
+		double greatest = 0.0;
+		for (int i = 0; i < fasta.length(); i++ ){
+			if(sortedTendencies.size()==0){
+				sortedTendencies.add(new ChainAAcid(chain.get(i).name(), chain.get(i).hydrophobicity(), 
+						aacids.get(i).polarity(), aacidLocations[i], tendency[i]));
+			}
+			else{
+				for(int j=0; j < sortedTendencies.size(); j++){
+					if(sortedTendencies.get(j).tendency() > tendency[i]){
+						sortedTendencies.add(j, new ChainAAcid(chain.get(i).name(), chain.get(i).hydrophobicity(), 
+								chain.get(i).polarity(), aacidLocations[i], tendency[i]));
+						//	System.out.println("added aacid to tendencies: " + sortedTendencies.get(j).name() + " with tendency " + sortedTendencies.get(j).tendency());
+
+						break;
+					}
+					else if(j == (sortedTendencies.size()-1)){
+						sortedTendencies.add(new ChainAAcid(chain.get(i).name(), chain.get(i).hydrophobicity(), 
+								chain.get(i).polarity(), aacidLocations[i], tendency[i]));
+						//System.out.println("added aacid to tendencies: " + sortedTendencies.get(j+1).name() + " with tendency " + sortedTendencies.get(j+1).tendency());
+						break;
+
+					}
+					else{
+						continue;
+					}
+				}
+			}
+			//	System.out.println("sorted tendency length is now " + sortedTendencies.size());
+			if(tendency[i] > greatest){
+				greatest = tendency[i];
+				greatestIndex = i; 
+			}
+		}
+
+		System.out.println("The change should be at " + aacidLocations[greatestIndex] + " the aminoacid: " + chain.get(greatestIndex).name() );
+
+		return sortedTendencies;
+	}
 
 }
 

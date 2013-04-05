@@ -17,6 +17,8 @@ import java.util.StringTokenizer;
 public class MutationGenerator {
 	
 	static int aacidLocations[];
+	static double scalar1;
+	static double scalar2;
 
 	public static void main(String[] args) throws Exception{
 
@@ -43,6 +45,9 @@ public class MutationGenerator {
 
 		//source: http://www.clcsupport.com/clcgenomicsworkbench/current/index.php?manual=Hydrophobicity_scales.html
 
+		scalar1 = 1.0;
+		scalar2 = 1.0;
+		
 		if(args.length < 4)
 			printError();
 
@@ -121,7 +126,7 @@ public class MutationGenerator {
 		if (fasta.equalsIgnoreCase(""))
 				fasta = pdbToString(args[3]);
 		//String fasta = args[2];  //the new input is the aminoacid chain
-		System.out.println("the chain is " + fasta);
+		System.out.println("the chain to be used is " + fasta);
 
 		chain = stringToAAcid(fasta, chain, aacids);  //convert the string to chain of AAcid objects
 
@@ -130,11 +135,11 @@ public class MutationGenerator {
 
 		for(int i = 0; i < fasta.length(); i++){
 			if(hydrophobicRegions.contains(aacidLocations[i]) ){
-				tendency1[i] = 12.3 - chain.get(i).hydrophobicity();
+				tendency1[i] = (12.3 - chain.get(i).hydrophobicity())/12.3; // normalize tendencies
 				//System.out.println("Aminoacid " + aacidLocations[i] + " which is " + chain.get(i).name() + " should be hydrophobic");
 			}
 			if(hydrogenBonds.contains(aacidLocations[i])){
-				tendency2[i] = 52.0 - chain.get(i).polarity();
+				tendency2[i] = (52.0 - chain.get(i).polarity())/52.0;
 				//System.out.println("Aminoacid " + aacidLocations[i] + " which is " + chain.get(i).name() + " should have hydrogen bonds");
 			}
 		}
@@ -142,8 +147,10 @@ public class MutationGenerator {
 		//there should be a formula that finds the balance between hydrophobicity and hydrogen bonding
 
 		double tendency[] = new double[fasta.length()];
-		for (int i = 0; i < fasta.length(); i++ )
-			tendency[i] = tendency1[i] + tendency2[i];
+		for (int i = 0; i < fasta.length(); i++ ){
+			tendency[i] = scalar1*tendency1[i] + scalar2*tendency2[i];
+			//System.out.println("tendency of aminoacid " + aacidLocations[i] + " is " + tendency1[i] + " + " + tendency2[i] + " = " + tendency[i]);
+		}
 
 		//determine the greatest tendency
 		int greatestIndex = 0;

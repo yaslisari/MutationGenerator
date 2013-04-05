@@ -9,13 +9,6 @@ public class AAcid {
 		hphob = hphobicity;
 		polar = htendency;
 	}
-	/*
-	public AAcid(char aacidn, double hphobicity, double htendency, int position){
-		acid = aacidn;
-		hphob = hphobicity;
-		polar = htendency;
-		this.position = position;
-	}*/
 	
 	public char name(){
 		return acid;

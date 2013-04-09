@@ -12,10 +12,7 @@ import java.util.Map.Entry;
 import java.util.Scanner;
 import java.util.StringTokenizer;
 
-//import org.biojava3.core.sequence.ProteinSequence;
-//import org.biojava3.core.sequence.io.FastaReaderHelper;
-
-//Mohamed testing github here//
+//Mohamed testing github here// 
 //end of testing//
 
 

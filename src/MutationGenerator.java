@@ -57,103 +57,37 @@ public class MutationGenerator {
 		if(args.length < 4)
 			printError();
 
-
-		Scanner sc = null;
-		try {
-			sc = new Scanner(new File("hydroph.csv"));
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		String line = sc.nextLine();
 		int counter = setHydrophobicityTable(args);	
 
-		ArrayList<Integer> hydrophobicRegions = new ArrayList<Integer>();
-		ArrayList<Integer> hydrogenBonds =  new ArrayList<Integer>();
 		ArrayList<AAcid> aacids;
 		ArrayList<AAcid> chain= new ArrayList<AAcid>();;
 		aacids = new ArrayList<AAcid>();
 		aacids.add(A);aacids.add(R);aacids.add(N);aacids.add(D);aacids.add(C);aacids.add(Q);aacids.add(E);aacids.add(G);
 		aacids.add(H);aacids.add(I);aacids.add(L);aacids.add(K);aacids.add(M);aacids.add(F);aacids.add(P);aacids.add(S);
 		aacids.add(T);aacids.add(W);aacids.add(Y);aacids.add(V);
-
+		ArrayList[] arguments;
+		
 		double hydrophr[] = new double[aacids.size()];  //hydrophobicity replace
 
-		hydrophr = setNewHydrophobicity(hydrophr, sc, counter, aacids);
+		hydrophr = setNewHydrophobicity(hydrophr, counter, aacids);
 
-		/*
-		for(int i = 0; i < aacids.size(); i++){
-			System.out.println("aminoacid " + aacids.get(i).name() + " = " + aacids.get(i).hydrophobicity());
-		}
-		 */
-
-		String input = "";
-		System.out.println(args.length + " arguments entered");
-
-		/*for(int i = 0; i < args.length; i++)
-			System.out.println("argument " + i + " is " + args[i]);*/
-
-		for (int i = 0; i < 2; i++){
-			input = input + args[i];
-			if(i !=1)
-				input = input + ";";
-		}
-
-		StringTokenizer st = new StringTokenizer(input, ";"); 
-		if( st.countTokens() != 2){
-			printError();
-		}
-		else{
-			//System.out.println("your input was : " + input);
-
-			String hydroph = st.nextToken();
-			String hydrob = st.nextToken();
-			//	System.out.println("arg 1 = " + hydroph + " arg2 = " + hydrob);
-
-			hydrophobicRegions = tokenize(hydroph);
-			System.out.println("hydrophobic in the areas = " + hydrophobicRegions.toString());
-			hydrogenBonds = tokenize(hydrob);
-			System.out.println("hydrogen bonds in the areas = " + hydrogenBonds.toString());
-
-		}
-
-		String fasta = "";
-		System.out.println("reading from file: " + args[3]);
-		for(int i = 0; i < args.length; i++){
-			if(args[i].equalsIgnoreCase("-chain") && ((i+1) <args.length)){
-				fasta = args[i+1];
-				break;
-			}
-			else if(args[i].contains(".pdb")){
-				fasta = pdbToString(args[i]);
-				break;
-			}
-		}
-		if (fasta.equalsIgnoreCase(""))
-			fasta = pdbToString(args[3]);
-		//String fasta = args[2];  //the new input is the aminoacid chain
-		System.out.println("the chain to be used is " + fasta);
+		
+		arguments = manageArgs(args);			//parse arguments
+		ArrayList<Integer> hydrophobicRegions = arguments[0];
+		ArrayList<Integer> hydrogenBonds = arguments[1];
+		
+		String fasta = getFastaChain(args);		//get the chain from file or input
 
 		chain = stringToAAcid(fasta, chain, aacids);  //convert the string to chain of AAcid objects
 
-
 		//sort for the tendencies
 		ArrayList<ChainAAcid> sortedTendencies = new ArrayList<ChainAAcid>();
+
 		sortedTendencies = sort(sortedTendencies, fasta, chain, hydrophobicRegions, hydrogenBonds, aacids);
 
-		System.out.println(sortedTendencies.toString());
-		String output = "[";
-		for(int i = 0; i < possibilities; i++){
-			if(possibilities < sortedTendencies.size()){
-				int pos = sortedTendencies.size()-1-i;
-				System.out.println("change priority " + (i+1)  + " should be at " + sortedTendencies.get(pos));
-				output = output + "(" + sortedTendencies.get(pos).chainPosition() + "," + "A)" ;  
-			}
-			else
-				System.out.println("asked possibilities exceed the number of aminoacids");
-		}
-		output = output + "]";
-		System.out.println("output = " + output);
+		//convert tendencies to string in the format of [(4,I), (36,S)]
+		String output = tendencyToString(sortedTendencies);
+		
 		String path ="c:\\Windows\\System32\\cmd.exe";
 		String input1 = "dir\n exit\n";
 		
@@ -161,6 +95,67 @@ public class MutationGenerator {
 		
 		
 }
+
+private static ArrayList[] manageArgs(String[] args) {
+	String input = "";
+	System.out.println(args.length + " arguments entered");
+	ArrayList<Integer> hydrophobicRegions = new ArrayList<Integer>();
+	ArrayList<Integer> hydrogenBonds =  new ArrayList<Integer>();
+	ArrayList arguments[] = new ArrayList[2];
+	
+	/*for(int i = 0; i < args.length; i++)
+		System.out.println("argument " + i + " is " + args[i]);*/
+
+	for (int i = 0; i < 2; i++){
+		input = input + args[i];
+		if(i !=1)
+			input = input + ";";
+	}
+
+	StringTokenizer st = new StringTokenizer(input, ";"); 
+	if( st.countTokens() != 2){
+		printError();
+	}
+	else{
+		//System.out.println("your input was : " + input);
+
+		String hydroph = st.nextToken();
+		String hydrob = st.nextToken();
+		//	System.out.println("arg 1 = " + hydroph + " arg2 = " + hydrob);
+
+		hydrophobicRegions = tokenize(hydroph);
+		System.out.println("hydrophobic in the areas = " + hydrophobicRegions.toString());
+		hydrogenBonds = tokenize(hydrob);
+		System.out.println("hydrogen bonds in the areas = " + hydrogenBonds.toString());
+		arguments[0] = hydrophobicRegions;
+		arguments[1] = hydrogenBonds;
+	}
+		return arguments;
+	}
+
+private static String getFastaChain(String[] args) {
+		String fasta = "";
+		//String fasta = args[2];  //the new input is the aminoacid chain
+		
+	//read chain from input or file
+			for(int i = 0; i < args.length; i++){
+				if(args[i].equalsIgnoreCase("-chain") && ((i+1) <args.length)){//if chain is entered manually
+					fasta = args[i+1];
+					break;
+				}
+				else if(args[i].contains(".pdb")){ //if chain is in the PDB file
+					System.out.println("reading from file: " + args[3]);
+					fasta = pdbToString(args[i]);
+					break;
+				}
+			}
+			
+			System.out.println("the chain to be used is " + fasta);
+
+		//	if (fasta.equalsIgnoreCase(""))  // burasinin islevi ne cozemedim.. eger gerekirse geri al
+		//		fasta = pdbToString(args[3]);
+			return fasta;
+	}
 
 public static void printError(){
 	System.out.println("Please enter the desired shape in the form of: hydrophobic regions; hydrogen bonded regions Hydrophobic_table_to_be_used AMINOACID_CHAIN");
@@ -239,8 +234,17 @@ public static ArrayList<Integer> tokenize(String toke){
 	return list;
 }
 
-public static double[] setNewHydrophobicity(double[] hydrophr, Scanner sc, int counter, ArrayList<AAcid> aacids){
-	String line;
+public static double[] setNewHydrophobicity(double[] hydrophr, int counter, ArrayList<AAcid> aacids){
+	Scanner sc = null;
+	//read hydrophobicity tables
+	try {
+		sc = new Scanner(new File("hydroph.csv"));
+	} catch (Exception e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+	
+	String line = sc.nextLine();
 	int a = 0;
 	while (sc.hasNextLine()){
 		line = sc.nextLine();
@@ -255,6 +259,13 @@ public static double[] setNewHydrophobicity(double[] hydrophr, Scanner sc, int c
 	sc.close();
 	//	for(int i = 0; i < hydrophr.length; i++)
 	//	System.out.println("entry " + i + " is " + hydrophr[i]);
+	
+	
+	/*
+	for(int i = 0; i < aacids.size(); i++){
+		System.out.println("aminoacid " + aacids.get(i).name() + " = " + aacids.get(i).hydrophobicity());
+	}
+	 */
 
 	return hydrophr;
 
@@ -487,7 +498,7 @@ public static ArrayList<ChainAAcid> sort(ArrayList<ChainAAcid> sortedTendencies,
 			greatestIndex = i; 
 		}
 	}
-
+	System.out.println(sortedTendencies.toString());
 	System.out.println("The change should be at " + aacidLocations[greatestIndex] + " the aminoacid: " + chain.get(greatestIndex).name() );
 
 	return sortedTendencies;
@@ -518,6 +529,23 @@ public static String sendToCommandline(String path, String input){
 		e.printStackTrace();
 	}
 	return output;
+}
+
+public static String tendencyToString(ArrayList<ChainAAcid> sortedTendencies){
+	String output = "[";
+	for(int i = 0; i < possibilities; i++){
+		if(possibilities < sortedTendencies.size()){
+			int pos = sortedTendencies.size()-1-i;
+			System.out.println("change priority " + (i+1)  + " should be at " + sortedTendencies.get(pos));
+			output = output + "(" + sortedTendencies.get(pos).chainPosition() + "," + "A)" ;  
+		}
+		else
+			System.out.println("asked possibilities exceed the number of aminoacids");
+	}
+	output = output + "]";
+	System.out.println("output = " + output);
+	return output;
+	
 }
 }
 

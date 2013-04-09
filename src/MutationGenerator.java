@@ -499,7 +499,9 @@ public static String sendToCommandline(String path, String input){
 		Process tr = Runtime.getRuntime().exec(path  );
 		Writer wr = new OutputStreamWriter( tr.getOutputStream() );
 		BufferedReader rd = new BufferedReader( new InputStreamReader( tr.getInputStream() ) );
-		wr.write( input );
+		if(input != null || input != ""){
+			wr.write( input );
+		}
 		wr.flush();
 		String s;
 		while((s = rd.readLine()) != null)

@@ -67,7 +67,8 @@ public class MutationGenerator {
 		double hydrophr[] = new double[aacids.size()];  //hydrophobicity replace
 
 		hydrophr = setNewHydrophobicity(hydrophr, counter, aacids);
-
+		char[] sortedHydrophobics = sortHydrophobics(aacids);
+		char[] sortedPolarity = sortPolarity(aacids);
 		
 		arguments = manageArgs(args);			//parse arguments
 		ArrayList<Integer> hydrophobicRegions = arguments[0];
@@ -82,8 +83,10 @@ public class MutationGenerator {
 
 		sortedTendencies = sort(sortedTendencies, fasta, chain, hydrophobicRegions, hydrogenBonds, aacids);
 
-		//convert tendencies to string in the format of [(4,I), (36,S)]
-		String output = tendencyToString(sortedTendencies);
+		
+		char predicted[] = predictChange(sortedTendencies, sortedHydrophobics, sortedPolarity);
+		//convert tendencies to string in the format of [(4,I) (36,S)]
+		String output = tendencyToString(sortedTendencies, predicted);
 		
 		String path ="c:\\Windows\\System32\\cmd.exe";
 		String input1 = "dir\n exit\n";
@@ -466,20 +469,20 @@ public static ArrayList<ChainAAcid> sort(ArrayList<ChainAAcid> sortedTendencies,
 	for (int i = 0; i < fasta.length(); i++ ){
 		if(sortedTendencies.size()==0){
 			sortedTendencies.add(new ChainAAcid(chain.get(i).name(), chain.get(i).hydrophobicity(), 
-					aacids.get(i).polarity(), aacidLocations[i], tendency[i]));
+					aacids.get(i).polarity(), aacidLocations[i], tendency[i], tendency1[i], tendency2[i]));
 		}
 		else{
 			for(int j=0; j < sortedTendencies.size(); j++){
 				if(sortedTendencies.get(j).tendency() > tendency[i]){
 					sortedTendencies.add(j, new ChainAAcid(chain.get(i).name(), chain.get(i).hydrophobicity(), 
-							chain.get(i).polarity(), aacidLocations[i], tendency[i]));
+							chain.get(i).polarity(), aacidLocations[i], tendency[i], tendency1[i], tendency2[i]));
 					//	System.out.println("added aacid to tendencies: " + sortedTendencies.get(j).name() + " with tendency " + sortedTendencies.get(j).tendency());
 
 					break;
 				}
 				else if(j == (sortedTendencies.size()-1)){
 					sortedTendencies.add(new ChainAAcid(chain.get(i).name(), chain.get(i).hydrophobicity(), 
-							chain.get(i).polarity(), aacidLocations[i], tendency[i]));
+							chain.get(i).polarity(), aacidLocations[i], tendency[i], tendency1[i], tendency2[i]));
 					//System.out.println("added aacid to tendencies: " + sortedTendencies.get(j+1).name() + " with tendency " + sortedTendencies.get(j+1).tendency());
 					break;
 
@@ -495,8 +498,8 @@ public static ArrayList<ChainAAcid> sort(ArrayList<ChainAAcid> sortedTendencies,
 			greatestIndex = i; 
 		}
 	}
-	System.out.println(sortedTendencies.toString());
-	System.out.println("The change should be at " + aacidLocations[greatestIndex] + " the aminoacid: " + chain.get(greatestIndex).name() );
+	//System.out.println("sorted tendencies are " + sortedTendencies.toString());
+	//System.out.println("The change should be at " + aacidLocations[greatestIndex] + " the aminoacid: " + chain.get(greatestIndex).name() );
 
 	return sortedTendencies;
 }
@@ -528,13 +531,14 @@ public static String sendToCommandline(String path, String input){
 	return output;
 }
 
-public static String tendencyToString(ArrayList<ChainAAcid> sortedTendencies){
+public static String tendencyToString(ArrayList<ChainAAcid> sortedTendencies, char[] predicted){
 	String output = "[";
 	for(int i = 0; i < possibilities; i++){
 		if(possibilities < sortedTendencies.size()){
 			int pos = sortedTendencies.size()-1-i;
 			System.out.println("change priority " + (i+1)  + " should be at " + sortedTendencies.get(pos));
-			output = output + "(" + sortedTendencies.get(pos).chainPosition() + "," + "A)" ;  
+			output = output + "(" + sortedTendencies.get(pos).chainPosition() + "," +  predicted[2*i] +  ")" ;  
+			output = output + "(" + sortedTendencies.get(pos).chainPosition() + "," +  predicted[2*i+1] +  ")" ;  
 		}
 		else
 			System.out.println("asked possibilities exceed the number of aminoacids");
@@ -544,6 +548,120 @@ public static String tendencyToString(ArrayList<ChainAAcid> sortedTendencies){
 	return output;
 	
 }
+
+public static char[] predictChange(ArrayList<ChainAAcid> sortedTendencies, char[] sortedHydrophobicity, char[] sortedPolarity){
+	char[] predicted = new char[possibilities*2];
+	for(int i = 0; i < possibilities; i++){
+		ChainAAcid currentAAcid = sortedTendencies.get(sortedTendencies.size()-i-1); 
+	//	System.out.println("hydrophobic tendency at this point is " + currentAAcid.hydrophobicTendency());
+	//	System.out.println("polar tendency at this point is " + currentAAcid.polarTendency());
+		if(currentAAcid.hydrophobicTendency() > currentAAcid.polarTendency()){  //the change should be for a more hydrophobic aminoacid
+			int length = sortedHydrophobicity.length;
+			//first, add the most hydropobic aminoacid
+			predicted[2*i] = sortedHydrophobicity[length-1];
+		//	System.out.println("first add the highest = " + 2*i + " at " + predicted[2*i]);
+			//then, find the one in the middle and add it
+			for(int j = 0; j < length; j++){
+				if(currentAAcid.name() - sortedHydrophobicity[j] == 0){
+					//this is where our aacid stands
+					predicted[(2*i+1)] = sortedHydrophobicity[(j+ (length-j)/2)];
+				//	System.out.println("our aminoacid is at " + j +" second add the middle = " + (2*i+1) + " at " + predicted[2*i+1] + " hphobicity " + currentAAcid.hydrophobicTendency());
+					break;
+				}
+			}
+			
+		}
+		else{
+			int length = sortedPolarity.length;
+			//first, add the most hydropobic aminoacid
+			predicted[2*i] = sortedPolarity[length-1];
+		//	System.out.println("first add the highest = " + 2*i + " at " + predicted[2*i]+ " polarity " + currentAAcid.polarTendency());
+			//then, find the one in the middle and add it
+			for(int j = 0; j < length; j++){
+				if(currentAAcid.name() - sortedPolarity[j] == 0){
+					//this is where our aacid stands
+					predicted[(2*i+1)] = sortedPolarity[j+(length-j)/2];
+				//	System.out.println("our aminoacid is at " + j + " second add the middle = " + (2*i+1) + " at " + predicted[2*i+1] + " at " + (j+ (length-j)/2));
+					break;
+				}
+			}
+			
+		}
+	}
+	
+	return predicted;
+}
+
+public static char[] sortHydrophobics(ArrayList<AAcid> aacids){
+	ArrayList<AAcid> sorted = new ArrayList<AAcid>();
+	for(int i = 0; i < aacids.size(); i++){
+		if(sorted.size()==0){
+			sorted.add(aacids.get(i));
+		}
+		else{
+			for(int j=0; j < sorted.size(); j++){
+				if(sorted.get(j).hydrophobicity() > aacids.get(i).hydrophobicity()){  //found the first aacid that has greater hydrophobicity than our aacid.
+					sorted.add(j, aacids.get(i));
+					break;
+				}
+				else if(j == (sorted.size()-1)){ //this is the aacid with greatest hydrophobicity so far
+					sorted.add(aacids.get(i));
+					break;
+
+				}
+				else{
+					continue;
+				}
+			}
+		}
+	}
+	
+	
+	
+	char[] sortedhydrophobics = new char[sorted.size()];
+	for(int i = 0; i < sorted.size(); i++){
+		sortedhydrophobics[i] = sorted.get(i).name();
+	//	System.out.println("sorted is "  + i + "- " +sorted.get(i).name() + " at hydrophobicity " + sorted.get(i).hydrophobicity());
+	}
+	
+	return sortedhydrophobics;
+}
+
+public static char[] sortPolarity(ArrayList<AAcid> aacids){
+	ArrayList<AAcid> sorted = new ArrayList<AAcid>();
+	for(int i = 0; i < aacids.size(); i++){
+		if(sorted.size()==0){
+			sorted.add(aacids.get(i));
+		}
+		else{
+			for(int j=0; j < sorted.size(); j++){
+				if(sorted.get(j).polarity() > aacids.get(i).polarity()){  //found the first aacid that has greater polarity than our aacid.
+					sorted.add(j, aacids.get(i));
+					break;
+				}
+				else if(j == (sorted.size()-1)){ //this is the aacid with greatest polarity so far
+					sorted.add(aacids.get(i));
+					break;
+
+				}
+				else{
+					continue;
+				}
+			}
+		}
+	}
+	
+	
+	
+	char[] sortedpolarity = new char[sorted.size()];
+	for(int i = 0; i < sorted.size(); i++){
+		sortedpolarity[i] = sorted.get(i).name();
+	//	System.out.println("sorted is " + i + "- " +sorted.get(i).name() + " at polarity " + sorted.get(i).polarity());
+	}
+	
+	return sortedpolarity;
+}
+
 }
 
 

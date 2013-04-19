@@ -39,7 +39,9 @@ public class ChainAAcid extends AAcid {
 	}
 	
 	public String toString(){
-		return "AAcid " + name() + " at position " + chainPosition() + " tendency " + tendency();
+		return "AAcid " + name() + " at position " + chainPosition() + " tendency " + tendency() 
+				+ " hydrophobic tendency " + hydrophobicTendency() + " polar tendency " + polarTendency()
+				+ " hydrophilic tendency " + hydrophilicTendency() + " nonpolar tendency " + nonPolarTendency();
 	}
 
 }

@@ -485,12 +485,12 @@ public class MutationGenerator {
 				//System.out.println("Aminoacid " + aacidLocations[i] + " which is " + chain.get(i).name() + " should have hydrogen bonds");
 			}
 			if(hydrophilicRegions.contains(aacidLocations[i]) ){  //burasi bir muamma??
-				tendency3[i] = (chain.get(i).hydrophobicity()-12.3)/18.0; // normalize tendencies
-				//System.out.println("Aminoacid " + aacidLocations[i] + " which is " + chain.get(i).name() + " should be hydrophilic");
+				tendency3[i] = (chain.get(i).hydrophobicity()-(-12.3))/18.0; // normalize tendencies
+				System.out.println("Aminoacid " + aacidLocations[i] + " which is " + chain.get(i).name() + " should be hydrophilic");
 			}
-			if(hydrogenBonds.contains(aacidLocations[i])){
+			if(noHydrogenBonds.contains(aacidLocations[i])){
 				tendency4[i] = (chain.get(i).polarity()-0)/52.0;
-				//System.out.println("Aminoacid " + aacidLocations[i] + " which is " + chain.get(i).name() + " should have no hydrogen bonds");
+				System.out.println("Aminoacid " + aacidLocations[i] + " which is " + chain.get(i).name() + " should have no hydrogen bonds");
 			}
 
 
@@ -511,6 +511,8 @@ public class MutationGenerator {
 			if(sortedTendencies.size()==0){
 				sortedTendencies.add(new ChainAAcid(chain.get(i).name(), chain.get(i).hydrophobicity(), 
 						aacids.get(i).polarity(), aacidLocations[i], tendency[i], tendency1[i], tendency2[i], tendency3[i], tendency4[i]));
+				//System.out.println("added " + sortedTendencies.get(0).toString() );
+				continue;
 			}
 			else{
 				for(int j=0; j < sortedTendencies.size(); j++){
@@ -518,6 +520,7 @@ public class MutationGenerator {
 						sortedTendencies.add(j, new ChainAAcid(chain.get(i).name(), chain.get(i).hydrophobicity(), 
 								chain.get(i).polarity(), aacidLocations[i], tendency[i], tendency1[i], tendency2[i], tendency3[i], tendency4[i]));
 						//	System.out.println("added aacid to tendencies: " + sortedTendencies.get(j).name() + " with tendency " + sortedTendencies.get(j).tendency());
+					//	System.out.println("added " + sortedTendencies.get(j).toString() );
 
 						break;
 					}
@@ -525,6 +528,7 @@ public class MutationGenerator {
 						sortedTendencies.add(new ChainAAcid(chain.get(i).name(), chain.get(i).hydrophobicity(), 
 								chain.get(i).polarity(), aacidLocations[i], tendency[i], tendency1[i], tendency2[i], tendency3[i], tendency4[i]));
 						//System.out.println("added aacid to tendencies: " + sortedTendencies.get(j+1).name() + " with tendency " + sortedTendencies.get(j+1).tendency());
+						//System.out.println("added " + sortedTendencies.get(sortedTendencies.size()-1).toString() );
 						break;
 
 					}
@@ -594,21 +598,21 @@ public class MutationGenerator {
 		char[] predicted = new char[possibilities*2];
 		for(int i = 0; i < possibilities; i++){
 			ChainAAcid currentAAcid = sortedTendencies.get(sortedTendencies.size()-i-1); 
-			boolean hydrophobic = (currentAAcid.hydrophobicTendency() > currentAAcid.polarTendency()) && 
-					(currentAAcid.hydrophobicTendency() > currentAAcid.nonPolarTendency()) &&
-					(currentAAcid.hydrophobicTendency() > currentAAcid.hydrophilicTendency());
+			boolean hydrophobic = (currentAAcid.hydrophobicTendency() >= currentAAcid.polarTendency()) && 
+					(currentAAcid.hydrophobicTendency() >= currentAAcid.nonPolarTendency()) &&
+					(currentAAcid.hydrophobicTendency() >= currentAAcid.hydrophilicTendency());
 
-			boolean hydrophilic = (currentAAcid.hydrophilicTendency() > currentAAcid.polarTendency()) && 
-					(currentAAcid.hydrophilicTendency() > currentAAcid.nonPolarTendency()) &&
-					(currentAAcid.hydrophilicTendency() > currentAAcid.hydrophobicTendency());
+			boolean hydrophilic = (currentAAcid.hydrophilicTendency() >= currentAAcid.polarTendency()) && 
+					(currentAAcid.hydrophilicTendency() >= currentAAcid.nonPolarTendency()) &&
+					(currentAAcid.hydrophilicTendency() >= currentAAcid.hydrophobicTendency());
 			
-			boolean polar = (currentAAcid.polarTendency() > currentAAcid.hydrophobicTendency()) && 
-					(currentAAcid.polarTendency() > currentAAcid.nonPolarTendency()) &&
-					(currentAAcid.polarTendency() > currentAAcid.hydrophilicTendency());
+			boolean polar = (currentAAcid.polarTendency() >= currentAAcid.hydrophobicTendency()) && 
+					(currentAAcid.polarTendency() >= currentAAcid.nonPolarTendency()) &&
+					(currentAAcid.polarTendency() >= currentAAcid.hydrophilicTendency());
 			
-			boolean nonpolar = (currentAAcid.nonPolarTendency() > currentAAcid.hydrophobicTendency()) && 
-					(currentAAcid.nonPolarTendency() > currentAAcid.polarTendency()) &&
-					(currentAAcid.nonPolarTendency() > currentAAcid.hydrophilicTendency());
+			boolean nonpolar = (currentAAcid.nonPolarTendency() >= currentAAcid.hydrophobicTendency()) && 
+					(currentAAcid.nonPolarTendency() >= currentAAcid.polarTendency()) &&
+					(currentAAcid.nonPolarTendency() >= currentAAcid.hydrophilicTendency());
 			
 					//	System.out.println("hydrophobic tendency at this point is " + currentAAcid.hydrophobicTendency());
 					//	System.out.println("polar tendency at this point is " + currentAAcid.polarTendency());
@@ -698,7 +702,7 @@ public class MutationGenerator {
 		char[] sortedhydrophobics = new char[sorted.size()];
 		for(int i = 0; i < sorted.size(); i++){
 			sortedhydrophobics[i] = sorted.get(i).name();
-			//	System.out.println("sorted is "  + i + "- " +sorted.get(i).name() + " at hydrophobicity " + sorted.get(i).hydrophobicity());
+				System.out.println("sorted is "  + i + "- " +sorted.get(i).name() + " at hydrophobicity " + sorted.get(i).hydrophobicity());
 		}
 
 		return sortedhydrophobics;
@@ -733,7 +737,7 @@ public class MutationGenerator {
 		char[] sortedpolarity = new char[sorted.size()];
 		for(int i = 0; i < sorted.size(); i++){
 			sortedpolarity[i] = sorted.get(i).name();
-			//	System.out.println("sorted is " + i + "- " +sorted.get(i).name() + " at polarity " + sorted.get(i).polarity());
+				System.out.println("sorted is " + i + "- " +sorted.get(i).name() + " at polarity " + sorted.get(i).polarity());
 		}
 
 		return sortedpolarity;

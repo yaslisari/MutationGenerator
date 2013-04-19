@@ -73,6 +73,8 @@ public class MutationGenerator {
 		arguments = manageArgs(args);			//parse arguments
 		ArrayList<Integer> hydrophobicRegions = arguments[0];
 		ArrayList<Integer> hydrogenBonds = arguments[1];
+		ArrayList<Integer> hydrophilicRegions = arguments[2];
+		ArrayList<Integer> noHydrogenBonds = arguments[3];
 
 		String fasta = getFastaChain(args);		//get the chain from file or input
 
@@ -81,7 +83,7 @@ public class MutationGenerator {
 		//sort for the tendencies
 		ArrayList<ChainAAcid> sortedTendencies = new ArrayList<ChainAAcid>();
 
-		sortedTendencies = sort(sortedTendencies, fasta, chain, hydrophobicRegions, hydrogenBonds, aacids);
+		sortedTendencies = sort(sortedTendencies, fasta, chain, hydrophobicRegions, hydrogenBonds, hydrophilicRegions, noHydrogenBonds, aacids);
 
 
 		char predicted[] = predictChange(sortedTendencies, sortedHydrophobics, sortedPolarity);
@@ -101,7 +103,9 @@ public class MutationGenerator {
 		System.out.println(args.length + " arguments entered");
 		ArrayList<Integer> hydrophobicRegions = new ArrayList<Integer>();
 		ArrayList<Integer> hydrogenBonds =  new ArrayList<Integer>();
-		ArrayList arguments[] = new ArrayList[2];
+		ArrayList<Integer> hydrophilicRegions = new ArrayList<Integer>();
+		ArrayList<Integer> noHydrogenBonds = new ArrayList<Integer>();
+		ArrayList arguments[] = new ArrayList[4];
 
 		/*for(int i = 0; i < args.length; i++)
 		System.out.println("argument " + i + " is " + args[i]);*/
@@ -121,14 +125,37 @@ public class MutationGenerator {
 
 			String hydroph = st.nextToken();
 			String hydrob = st.nextToken();
-			//	System.out.println("arg 1 = " + hydroph + " arg2 = " + hydrob);
+			System.out.println("arg 1 = " + hydroph + " arg2 = " + hydrob);
 
 			hydrophobicRegions = tokenize(hydroph);
+
+			//take out hydrophillic regions
+			for	(int i = 0; i < hydrophobicRegions.size(); i++){
+				if(hydrophobicRegions.get(i)<0){
+					hydrophilicRegions.add(hydrophobicRegions.get(i)*(-1));
+					hydrophobicRegions.remove(i);
+				}
+			}
+
 			System.out.println("hydrophobic in the areas = " + hydrophobicRegions.toString());
+			System.out.println("hydrophilic in the areas = " + hydrophilicRegions.toString());
+
 			hydrogenBonds = tokenize(hydrob);
+
+			//take out no-hydrogen bond regions
+			for	(int i = 0; i < hydrogenBonds.size(); i++){
+				if(hydrogenBonds.get(i)<0){
+					noHydrogenBonds.add(hydrogenBonds.get(i)*(-1));
+					hydrogenBonds.remove(i);
+				}
+			}
+
 			System.out.println("hydrogen bonds in the areas = " + hydrogenBonds.toString());
+			System.out.println("no hydrogen bonds in the areas = " + noHydrogenBonds.toString());
 			arguments[0] = hydrophobicRegions;
 			arguments[1] = hydrogenBonds;
+			arguments[2] = hydrophilicRegions;
+			arguments[3] = noHydrogenBonds;
 		}
 		return arguments;
 	}
@@ -159,8 +186,8 @@ public class MutationGenerator {
 
 	public static void printError(){
 		System.out.println("Please enter the desired shape in the form of: hydrophobic regions; hydrogen bonded regions Hydrophobic_table_to_be_used AMINOACID_CHAIN");
-		System.out.println("For example: 26-31,34 23,25 KD 2BEG.pdb ");
-		System.out.println("Another example: 26-31,34 23,25 KD -chain DAEFRHDSGYEVHHQKLVFFAEDVGSNKGAIIGLMVGGVVIA ");
+		System.out.println("For example: 26:31,34,-35 23,25,-24 KD 2BEG.pdb ");
+		System.out.println("Another example: 26:31,34,-35 23,25,-24 KD -chain DAEFRHDSGYEVHHQKLVFFAEDVGSNKGAIIGLMVGGVVIA ");
 		System.exit(1);
 	}
 
@@ -200,8 +227,8 @@ public class MutationGenerator {
 		for(int i= 0; i < tokeLength; i++){
 			tokearray[i] = st.nextToken();
 			//System.out.println(" tokearray [" + i + "] = " + tokearray[i]);
-			if(tokearray[i].toString().contains("-")){ //if there is a range
-				StringTokenizer st2 = new StringTokenizer(tokearray[i], "-");
+			if(tokearray[i].toString().contains(":")){ //if there is a range
+				StringTokenizer st2 = new StringTokenizer(tokearray[i], ":");
 
 				if (st2.countTokens() !=2)
 					printError();
@@ -439,27 +466,40 @@ public class MutationGenerator {
 	}
 
 	public static ArrayList<ChainAAcid> sort(ArrayList<ChainAAcid> sortedTendencies, String fasta, ArrayList<AAcid> chain, 
-			ArrayList<Integer> hydrophobicRegions, ArrayList<Integer> hydrogenBonds, ArrayList<AAcid> aacids ){
+			ArrayList<Integer> hydrophobicRegions, ArrayList<Integer> hydrogenBonds, ArrayList<Integer> hydrophilicRegions, 
+			ArrayList<Integer> noHydrogenBonds, ArrayList<AAcid> aacids ){
 
 		double tendency1[] = new double[fasta.length()]; //hydrophobicity
 		double tendency2[] = new double[fasta.length()]; //polarity
+		double tendency3[] = new double[fasta.length()]; //hydrophilicity
+		double tendency4[] = new double[fasta.length()]; //non-polarity
 
 		for(int i = 0; i < fasta.length(); i++){
 			if(hydrophobicRegions.contains(aacidLocations[i]) ){
-				tendency1[i] = (12.3 - chain.get(i).hydrophobicity())/12.3; // normalize tendencies
+				tendency1[i] = (5.7 - chain.get(i).hydrophobicity())/18.0; // normalize tendencies
 				//System.out.println("Aminoacid " + aacidLocations[i] + " which is " + chain.get(i).name() + " should be hydrophobic");
 			}
 			if(hydrogenBonds.contains(aacidLocations[i])){
 				tendency2[i] = (52.0 - chain.get(i).polarity())/52.0;
 				//System.out.println("Aminoacid " + aacidLocations[i] + " which is " + chain.get(i).name() + " should have hydrogen bonds");
 			}
+			if(hydrophilicRegions.contains(aacidLocations[i]) ){  //burasi bir muamma??
+				tendency3[i] = (chain.get(i).hydrophobicity()-(-12.3))/18.0; // normalize tendencies
+				//System.out.println("Aminoacid " + aacidLocations[i] + " which is " + chain.get(i).name() + " should be hydrophilic");
+			}
+			if(noHydrogenBonds.contains(aacidLocations[i])){
+				tendency4[i] = (chain.get(i).polarity()-0)/52.0;
+				//System.out.println("Aminoacid " + aacidLocations[i] + " which is " + chain.get(i).name() + " should have no hydrogen bonds");
+			}
+
+
 		}
 
 		//there should be a formula that finds the balance between hydrophobicity and hydrogen bonding
 
 		double tendency[] = new double[fasta.length()];
 		for (int i = 0; i < fasta.length(); i++ ){
-			tendency[i] = scalar1*tendency1[i] + scalar2*tendency2[i];
+			tendency[i] = scalar1*tendency1[i] + scalar2*tendency2[i] + scalar1*tendency3[i] + scalar2*tendency4[i] ;
 			//System.out.println("tendency of aminoacid " + aacidLocations[i] + " is " + tendency1[i] + " + " + tendency2[i] + " = " + tendency[i]);
 		}
 
@@ -469,21 +509,25 @@ public class MutationGenerator {
 		for (int i = 0; i < fasta.length(); i++ ){
 			if(sortedTendencies.size()==0){
 				sortedTendencies.add(new ChainAAcid(chain.get(i).name(), chain.get(i).hydrophobicity(), 
-						aacids.get(i).polarity(), aacidLocations[i], tendency[i], tendency1[i], tendency2[i]));
+						aacids.get(i).polarity(), aacidLocations[i], tendency[i], tendency1[i], tendency2[i], tendency3[i], tendency4[i]));
+				//System.out.println("added " + sortedTendencies.get(0).toString() );
+				continue;
 			}
 			else{
 				for(int j=0; j < sortedTendencies.size(); j++){
 					if(sortedTendencies.get(j).tendency() > tendency[i]){
 						sortedTendencies.add(j, new ChainAAcid(chain.get(i).name(), chain.get(i).hydrophobicity(), 
-								chain.get(i).polarity(), aacidLocations[i], tendency[i], tendency1[i], tendency2[i]));
+								chain.get(i).polarity(), aacidLocations[i], tendency[i], tendency1[i], tendency2[i], tendency3[i], tendency4[i]));
 						//	System.out.println("added aacid to tendencies: " + sortedTendencies.get(j).name() + " with tendency " + sortedTendencies.get(j).tendency());
+					//	System.out.println("added " + sortedTendencies.get(j).toString() );
 
 						break;
 					}
 					else if(j == (sortedTendencies.size()-1)){
 						sortedTendencies.add(new ChainAAcid(chain.get(i).name(), chain.get(i).hydrophobicity(), 
-								chain.get(i).polarity(), aacidLocations[i], tendency[i], tendency1[i], tendency2[i]));
+								chain.get(i).polarity(), aacidLocations[i], tendency[i], tendency1[i], tendency2[i], tendency3[i], tendency4[i]));
 						//System.out.println("added aacid to tendencies: " + sortedTendencies.get(j+1).name() + " with tendency " + sortedTendencies.get(j+1).tendency());
+						//System.out.println("added " + sortedTendencies.get(sortedTendencies.size()-1).toString() );
 						break;
 
 					}
@@ -492,11 +536,11 @@ public class MutationGenerator {
 					}
 				}
 			}
-			//	System.out.println("sorted tendency length is now " + sortedTendencies.size());
+			/*	System.out.println("sorted tendency length is now " + sortedTendencies.size());
 			if(tendency[i] > greatest){
 				greatest = tendency[i];
 				greatestIndex = i; 
-			}
+			}*/
 		}
 		//System.out.println("sorted tendencies are " + sortedTendencies.toString());
 		//System.out.println("The change should be at " + aacidLocations[greatestIndex] + " the aminoacid: " + chain.get(greatestIndex).name() );
@@ -560,40 +604,76 @@ public class MutationGenerator {
 		char[] predicted = new char[possibilities*2];
 		for(int i = 0; i < possibilities; i++){
 			ChainAAcid currentAAcid = sortedTendencies.get(sortedTendencies.size()-i-1); 
-			//	System.out.println("hydrophobic tendency at this point is " + currentAAcid.hydrophobicTendency());
-			//	System.out.println("polar tendency at this point is " + currentAAcid.polarTendency());
-			if(currentAAcid.hydrophobicTendency() > currentAAcid.polarTendency()){  //the change should be for a more hydrophobic aminoacid
-				int length = sortedHydrophobicity.length;
-				//first, add the most hydropobic aminoacid
-				predicted[2*i] = sortedHydrophobicity[length-1];
-				//	System.out.println("first add the highest = " + 2*i + " at " + predicted[2*i]);
-				//then, find the one in the middle and add it
-				for(int j = 0; j < length; j++){
-					if(currentAAcid.name() - sortedHydrophobicity[j] == 0){
-						//this is where our aacid stands
-						predicted[(2*i+1)] = sortedHydrophobicity[(j+ (length-j)/2)];
-						//	System.out.println("our aminoacid is at " + j +" second add the middle = " + (2*i+1) + " at " + predicted[2*i+1] + " hphobicity " + currentAAcid.hydrophobicTendency());
-						break;
-					}
-				}
+			boolean hydrophobic = (currentAAcid.hydrophobicTendency() >= currentAAcid.polarTendency()) && 
+					(currentAAcid.hydrophobicTendency() >= currentAAcid.nonPolarTendency()) &&
+					(currentAAcid.hydrophobicTendency() >= currentAAcid.hydrophilicTendency());
 
-			}
-			else{
-				int length = sortedPolarity.length;
-				//first, add the most hydropobic aminoacid
-				predicted[2*i] = sortedPolarity[length-1];
-				//	System.out.println("first add the highest = " + 2*i + " at " + predicted[2*i]+ " polarity " + currentAAcid.polarTendency());
-				//then, find the one in the middle and add it
-				for(int j = 0; j < length; j++){
-					if(currentAAcid.name() - sortedPolarity[j] == 0){
-						//this is where our aacid stands
-						predicted[(2*i+1)] = sortedPolarity[j+(length-j)/2];
-						//	System.out.println("our aminoacid is at " + j + " second add the middle = " + (2*i+1) + " at " + predicted[2*i+1] + " at " + (j+ (length-j)/2));
-						break;
-					}
-				}
+			boolean hydrophilic = (currentAAcid.hydrophilicTendency() >= currentAAcid.polarTendency()) && 
+					(currentAAcid.hydrophilicTendency() >= currentAAcid.nonPolarTendency()) &&
+					(currentAAcid.hydrophilicTendency() >= currentAAcid.hydrophobicTendency());
+			
+			boolean polar = (currentAAcid.polarTendency() >= currentAAcid.hydrophobicTendency()) && 
+					(currentAAcid.polarTendency() >= currentAAcid.nonPolarTendency()) &&
+					(currentAAcid.polarTendency() >= currentAAcid.hydrophilicTendency());
+			
+			boolean nonpolar = (currentAAcid.nonPolarTendency() >= currentAAcid.hydrophobicTendency()) && 
+					(currentAAcid.nonPolarTendency() >= currentAAcid.polarTendency()) &&
+					(currentAAcid.nonPolarTendency() >= currentAAcid.hydrophilicTendency());
+			
+					//	System.out.println("hydrophobic tendency at this point is " + currentAAcid.hydrophobicTendency());
+					//	System.out.println("polar tendency at this point is " + currentAAcid.polarTendency());
+					if(hydrophobic){  //the change should be for a more hydrophobic aminoacid
+						int length = sortedHydrophobicity.length;
+						//first, add the most hydropobic aminoacid
+						predicted[2*i] = sortedHydrophobicity[length-1];
+						//	System.out.println("first add the highest = " + 2*i + " at " + predicted[2*i]);
+						//then, find the one in the middle and add it
+						for(int j = 0; j < length; j++){
+							if(currentAAcid.name() - sortedHydrophobicity[j] == 0){
+								//this is where our aacid stands
+								predicted[(2*i+1)] = sortedHydrophobicity[(j+ (length-j)/2)];
+								//	System.out.println("our aminoacid is at " + j +" second add the middle = " + (2*i+1) + " at " + predicted[2*i+1] + " hphobicity " + currentAAcid.hydrophobicTendency());
+								break;
+							}
+						}
 
-			}
+					}
+					else if(hydrophilic){
+						int length = sortedHydrophobicity.length;
+						predicted[2*i] = sortedHydrophobicity[0];
+						for(int j = 0; j < length; j++){
+							if(currentAAcid.name() - sortedHydrophobicity[j] == 0){
+								predicted[(2*i+1)] = sortedHydrophobicity[j/2];
+								break;
+							}
+						}
+					}
+					else if(nonpolar){
+						int length = sortedPolarity.length;
+						predicted[2*i] = sortedPolarity[0];
+						for(int j = 0; j < length; j++){
+							if(currentAAcid.name() - sortedPolarity[j] == 0){
+								predicted[(2*i+1)] = sortedPolarity[j/2];
+								break;
+							}
+						}						
+					}
+					else{ //polar
+						int length = sortedPolarity.length;
+						//first, add the most hydropobic aminoacid
+						predicted[2*i] = sortedPolarity[length-1];
+						//	System.out.println("first add the highest = " + 2*i + " at " + predicted[2*i]+ " polarity " + currentAAcid.polarTendency());
+						//then, find the one in the middle and add it
+						for(int j = 0; j < length; j++){
+							if(currentAAcid.name() - sortedPolarity[j] == 0){
+								//this is where our aacid stands
+								predicted[(2*i+1)] = sortedPolarity[j+(length-j)/2];
+								//	System.out.println("our aminoacid is at " + j + " second add the middle = " + (2*i+1) + " at " + predicted[2*i+1] + " at " + (j+ (length-j)/2));
+								break;
+							}
+						}
+
+					}
 		}
 
 		return predicted;
